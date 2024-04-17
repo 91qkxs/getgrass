@@ -35,7 +35,7 @@ async def receive_message(websocket):
     return json.loads(response)
 
 
-async def authenticate(websocket, auth_id, device_id, user_id):
+async def authenticate(websocket, auth_id, device_id, user_id, agent):
     """
     发送认证消息到 WebSocket 服务器
     """
@@ -45,7 +45,7 @@ async def authenticate(websocket, auth_id, device_id, user_id):
         "result": {
             "browser_id": device_id,
             "user_id": user_id,
-            "user_agent": 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            "user_agent": agent,
             "timestamp": int(time.time()),
             "device_type": "extension",
             "version": "3.3.2"
@@ -54,14 +54,14 @@ async def authenticate(websocket, auth_id, device_id, user_id):
     await send_message(websocket, auth_message)
 
 
-async def run_websocket_logic(websocket, user_id, device_id):
+async def run_websocket_logic(websocket, user_id, device_id, agent):
     try:
         # 第1步：接收平台auth请求响应
         auth_response = await receive_message(websocket)
 
         await asyncio.sleep(random.randint(10, 20) / 10)
         # 第3步：进行auth请求
-        await authenticate(websocket, auth_response["id"], device_id, user_id)
+        await authenticate(websocket, auth_response["id"], device_id, user_id, agent)
         await asyncio.sleep(20)
 
         """
@@ -110,7 +110,8 @@ async def run_with_proxy(uri, ssl_context, custom_headers, device_id, user_id, p
     使用代理运行 WebSocket 连接
     """
     try:
-        async with proxy_connect(uri, ssl=ssl_context, extra_headers=custom_headers, proxy=proxy, proxy_conn_timeout=10) as websocket_p:
+        async with proxy_connect(uri, ssl=ssl_context, extra_headers=custom_headers, proxy=proxy,
+                                 proxy_conn_timeout=10) as websocket_p:
             # 将连接加入到已连接的 WebSocket 列表中
             connected_websockets.append(websocket_p)
             await run_websocket_logic(websocket_p, user_id, device_id)
@@ -118,19 +119,17 @@ async def run_with_proxy(uri, ssl_context, custom_headers, device_id, user_id, p
         logging.error(f"Error occurred with proxy {proxy.proxy_host}: {proxy.proxy_port} {e}")
 
 
-
-async def run_without_proxy(uri, ssl_context, custom_headers, device_id, user_id):
+async def run_without_proxy(uri, ssl_context, agent, device_id, user_id):
     """
     不使用代理运行 WebSocket 连接
     """
     try:
-        async with websockets.connect(uri, ssl=ssl_context, extra_headers=custom_headers) as websocket:
+        async with websockets.connect(uri, ssl=ssl_context, extra_headers={"User-Agent": agent}) as websocket:
             # 将连接加入到已连接的 WebSocket 列表中
             connected_websockets.append(websocket)
-            await run_websocket_logic(websocket, user_id, device_id)
+            await run_websocket_logic(websocket, user_id, device_id, agent)
     except Exception as e:
         logging.error(f"Error occurred without proxy  {e}")
-
 
 
 async def close_connected_websockets():
@@ -143,58 +142,23 @@ async def close_connected_websockets():
         await ws.close()
 
 
-async def main(user_id, use_proxy, proxies=None):
+async def main(user_id):
     """
     主函数
     """
     # 在运行主函数之前确保关闭之前的所有 WebSocket 连接
     await close_connected_websockets()
 
+    device_id = str(uuid.uuid4())
+    logging.info(device_id)
+    uri_options = ["wss://proxy.wynd.network:4650/", "wss://proxy.wynd.network:4444"]
+    agent = Faker().chrome()
 
-    tasks = []
-
-
-    if use_proxy:
-        for proxy in proxies:
-            device_id = str(uuid.uuid4())
-            logging.info(device_id)
-            uri_options = ["wss://proxy.wynd.network:4650/", "wss://proxy.wynd.network:4444"]
-            # uri_options = ["wss://proxy.wynd.network:4444"]
-            custom_headers = {
-                "User-Agent": Faker().chrome()
-            }
-
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-
-            tasks.append(run_with_proxy(random.choice(uri_options), ssl_context, custom_headers, device_id, user_id, proxy))
-    else:
-        device_id = str(uuid.uuid4())
-        logging.info(device_id)
-        uri_options = ["wss://proxy.wynd.network:4650/", "wss://proxy.wynd.network:4444"]
-        #uri_options = ["wss://proxy.wynd.network:4650"]
-        custom_headers = {
-            "User-Agent": Faker().chrome()
-        }
-
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-
-        tasks.append(run_without_proxy(random.choice(uri_options), ssl_context, custom_headers, device_id, user_id))
-
-    await asyncio.gather(*tasks)
-
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    await run_without_proxy(random.choice(uri_options), ssl_context, agent, device_id, user_id)
 
 if __name__ == "__main__":
-    user_id = 'xxxx-xxxx-xxxx-xxxx-xxxx-xxxx'
-    use_proxy = True  # 设置为 True 则使用代理，False 则不使用
-    # 账号密码模式 'socks5://username:password@address:port'
-    # 无密码模式 'socks5://address:port'
-
-    proxies = [Proxy.from_url("socks5://192.168.2.141:1082")]
-
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(user_id, use_proxy, proxies))
+    user_id = '5b62d235-273c-4707-85df-9bcca26a5306'
+    asyncio.run(main(user_id))

@@ -16,35 +16,62 @@
 
 - 导包
 
-  单独导包：grass.py文件都复制到你的服务器某个目录下依次运行pip3 install websockets  、pip3 install websockets_proxy、pip3 install Faker 、pip3 install async_timeout
+  ​	打开shell命令行 进入到文件根目录，执行：pip3 install -r requirements.txt
 
-  批量导包：把 requirements.txt文件、grass.py文件都复制到你的服务器某个目录下，pip3 install -r requirements.txt
+  ##### 不用代理运行：
 
-- 将main方法参数换成你的
+  找到start_no_proxy.py将main方法参数换成你的既可，然后执行python3  start_no_proxy.py 就行
 
   ~~~python
       user_id = '5b62d235-273c-4707-85df-9bcca26a5306' #你自己的user_id
-      use_proxy = False  # 设置为 True 则使用代理，False 则不使用,根据自己需求
-      # socks5代理账号密码模式 格式'socks5://username:password@address:port'
-      # socks5代理无密码模式格式 'socks5://address:port'
-      proxies = [Proxy.from_url("socks5://192.168.124.20:1082"),Proxy.from_url("socks5://udk390:32384@182.44.113.41:16790")]#如果使用代理把这里改成你的，使用几个改几个
-  
-  
+    
   ~~~
 
+  ##### 使用代理运行
+
+  注意：如果你使用代理的话，此脚本需要依赖redis环境
+
+  第一步：安装redis
+
+  ~~~
+为何要使用redis？
   
-
-  user_id改为你的user_id
-
-  如果不用代理不用动，如果使用代理就use_proxy设置为True，然后在下面addr和port填写的代理ip和密码
-
-  如果代理有用户名密码下面接着填。没有就把username和password删了即可
+正常脚本每次运行会模拟生成一个浏览器agent和设备id，你第运行10次就会生成10个，通过使用redis，保障每个代理的设备号和agent永远只有1个
+  即便你运行1000次 你设备依然只有这1个。
   
-  然后运行：python3 grass.py即可
+  安装方式
+  如果你是windows：
+  打开这个网站：https://github.com/MicrosoftArchive/redis/releases
+  建议下载.ZIP格式文件
+  下载完成后找到 redis-server.exe 
+  使用脚本时候 点一下运行，出来个运行界面即可，不用脚本里 就关闭窗口
+  如果你安装msi服务，安装完成基本这个服务就一直处于打开状态
+  
+  如果你是mac
+  直接brew安装即可
+  linux简单直接google对应安装教程
+  
+  注意每次使用脚本必须要保证redis服务处于开启状态
+  如果运行报错提示6379错误就是redis没有打开
+  
+  如果你本机以前已经有redis，或者你有redis服务
+  你直接找到config目录下的redis.py配置你的redis服务地址就行
+  
+  ~~~
+  
+  第二步：配置用户ID和代理信息
 
-  如何配置多号？
+  ~~~
+  格式如下：
+  5b62d230-xxxxx-5307,socks5://user1:pwd1@193.168.221.1:21322
+  5b62d230-xxxxx-5307,socks5://user1:pwd1@193.168.221.1:21320
+  5b62d231-xxxxx-5307,socks5://193.168.221.1:21322
+  5b62d232-xxxxx-5308,socks5://193.168.221.2:21322
+  ~~~
 
-  多号你就在这里多配置几个代理信息，然后遍历循环，开启多线程，保障每个线程一个单独ip即可。
+ 	然后找到wallet目录下的users.txt,将你的用户id和socket5代理复制进去即可,注意账号和代理直接用英文逗号分隔然后执行python3  start_proxy.py 就行
+
+
 
 - 如何获取user_id
 
