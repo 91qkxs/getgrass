@@ -23,8 +23,7 @@
   找到start_no_proxy.py将main方法参数换成你的既可，然后执行python3  start_no_proxy.py 就行
 
   ~~~python
-      user_id = '5b62d235-273c-4707-85df-9bcca26a5306' #你自己的user_id
-    
+  user_id = '5b62d235-273c-4707-85df-9bcca26a5306' #你自己的user_id
   ~~~
 
   ##### 使用代理运行
@@ -34,9 +33,9 @@
   第一步：安装redis
 
   ~~~
-为何要使用redis？
+  为何要使用redis？
   
-正常脚本每次运行会模拟生成一个浏览器agent和设备id，你第运行10次就会生成10个，通过使用redis，保障每个代理的设备号和agent永远只有1个
+  正常脚本每次运行会模拟生成一个浏览器agent和设备id，你第运行10次就会生成10个，通过使用redis，保障每个代理的设备号和agent永远只有1个
   即便你运行1000次 你设备依然只有这1个。
   
   安装方式
@@ -58,7 +57,7 @@
   你直接找到config目录下的redis.py配置你的redis服务地址就行
   
   ~~~
-  
+
   第二步：配置用户ID和代理信息
 
   ~~~
@@ -68,8 +67,7 @@
   5b62d231-xxxxx-5307,socks5://193.168.221.1:21322
   5b62d232-xxxxx-5308,socks5://193.168.221.2:21322
   ~~~
-
- 	然后找到wallet目录下的users.txt,将你的用户id和socket5代理复制进去即可,注意账号和代理直接用英文逗号分隔然后执行python3  start_proxy.py 就行
+  找到wallet目录下的users.txt,将你的用户id和socket5代理复制进去即可,注意账号和代理直接用英文逗号分隔然后执行python3  start_proxy.py 就行
 
 
 
