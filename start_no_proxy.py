@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import random
 import ssl
 import time
@@ -8,10 +7,10 @@ import uuid
 
 import websockets
 from faker import Faker
-from websockets_proxy import Proxy, proxy_connect
+from loguru import logger
+from websockets_proxy import  proxy_connect
 
 # 配置日志级别
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 存储已连接的 WebSocket 对象的列表
 connected_websockets = []
@@ -22,7 +21,7 @@ async def send_message(websocket, message):
     发送消息到 WebSocket 服务器
     """
     message_str = json.dumps(message)
-    logging.info(f"Sending message: {message_str}")
+    logger.info(f"Sending message: {message_str}")
     await websocket.send(message_str)
 
 
@@ -31,7 +30,7 @@ async def receive_message(websocket):
     接收 WebSocket 服务器的消息
     """
     response = await websocket.recv()
-    logging.info(f"Received response: {response}")
+    logger.info(f"Received response: {response}")
     return json.loads(response)
 
 
@@ -100,7 +99,7 @@ async def run_websocket_logic(websocket, user_id, device_id, agent):
             await asyncio.sleep(random.randint(1, 9) / 10)
 
     except websockets.exceptions.ConnectionClosed as e:
-        logging.error(f"Connection closed unexpectedly: {e}")
+        logger.error(f"Connection closed unexpectedly: {e}")
     finally:
         await websocket.close()  # 确保关闭连接
 
@@ -116,7 +115,7 @@ async def run_with_proxy(uri, ssl_context, custom_headers, device_id, user_id, p
             connected_websockets.append(websocket_p)
             await run_websocket_logic(websocket_p, user_id, device_id)
     except Exception as e:
-        logging.error(f"Error occurred with proxy {proxy.proxy_host}: {proxy.proxy_port} {e}")
+        logger.error(f"代理不可用， {proxy.proxy_host}: {proxy.proxy_port} ，异常信息：{e}")
 
 
 async def run_without_proxy(uri, ssl_context, agent, device_id, user_id):
@@ -129,7 +128,7 @@ async def run_without_proxy(uri, ssl_context, agent, device_id, user_id):
             connected_websockets.append(websocket)
             await run_websocket_logic(websocket, user_id, device_id, agent)
     except Exception as e:
-        logging.error(f"Error occurred without proxy  {e}")
+        logger.error(f"Error occurred without proxy  {e}")
 
 
 async def close_connected_websockets():
@@ -150,7 +149,7 @@ async def main(user_id):
     await close_connected_websockets()
 
     device_id = str(uuid.uuid4())
-    logging.info(device_id)
+    logger.info(device_id)
     uri_options = ["wss://proxy.wynd.network:4650/", "wss://proxy.wynd.network:4444"]
     agent = Faker().chrome()
 

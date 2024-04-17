@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import os
 import random
 import ssl
@@ -17,7 +16,6 @@ from util.common_utils import read_users_from_files, to_md5
 from util.redis_util import RedisUtils
 
 # 配置日志级别
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 存储已连接的 WebSocket 对象的列表
 connected_websockets = []
@@ -30,7 +28,7 @@ async def send_message(websocket, message):
     发送消息到 WebSocket 服务器
     """
     message_str = json.dumps(message)
-    logging.info(f"Sending message: {message_str}")
+    logger.info(f"Sending message: {message_str}")
     await websocket.send(message_str)
 
 
@@ -39,7 +37,7 @@ async def receive_message(websocket):
     接收 WebSocket 服务器的消息
     """
     response = await websocket.recv()
-    logging.info(f"Received response: {response}")
+    logger.info(f"Received response: {response}")
     return json.loads(response)
 
 
@@ -108,7 +106,7 @@ async def run_websocket_logic(websocket, user_id, device_id,agent):
             await asyncio.sleep(random.randint(1, 9) / 10)
 
     except websockets.exceptions.ConnectionClosed as e:
-        logging.error(f"Connection closed unexpectedly: {e}")
+        logger.error(f"Connection closed unexpectedly: {e}")
     finally:
         await websocket.close()  # 确保关闭连接
 
@@ -125,7 +123,7 @@ async def run_with_proxy(uri, ssl_context, agent, device_id, user_id, proxy):
             connected_websockets.append(websocket_p)
             await run_websocket_logic(websocket_p, user_id, device_id,agent)
     except Exception as e:
-        logging.error(f"Error occurred with proxy {proxy.proxy_host}: {proxy.proxy_port} {e}")
+        logger.error(f"代理不可用 {proxy.proxy_host}: {proxy.proxy_port} ，异常信息：{e}")
 
 
 async def run_without_proxy(uri, ssl_context, custom_headers, device_id, user_id):
@@ -138,7 +136,7 @@ async def run_without_proxy(uri, ssl_context, custom_headers, device_id, user_id
             connected_websockets.append(websocket)
             await run_websocket_logic(websocket, user_id, device_id)
     except Exception as e:
-        logging.error(f"Error occurred without proxy  {e}")
+        logger.error(f"Error occurred without proxy  {e}")
 
 
 async def close_connected_websockets():
@@ -182,19 +180,15 @@ async def task_multi(file_names):
         raise ValueError("请导入用户和代理！！！！")
     # 打乱数据顺序
     random.shuffle(users)
-    if len(users) >= 5:
-        max_concurrency = 5  # 设置你想要的并发数量
-    else:
-        max_concurrency = len(users)
     # 控制并发数量
-    semaphore = asyncio.Semaphore(max_concurrency)
+    semaphore = asyncio.Semaphore(len(users))
 
     async def limited_task(wallet):
         async with semaphore:
             try:
                 await task_single(wallet)
             except Exception as e:
-                logging.error(e)
+                logger.error(e)
 
     # 并发处理
     tasks = [limited_task(user) for user in users]
