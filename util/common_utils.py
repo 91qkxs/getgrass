@@ -163,12 +163,12 @@ def fmt_float(price, decimal_places):
     return rounded_float, number_str
 
 
-def load_abi(file_name, current_directory, *directories, encoding: Optional[str] = None) -> list | dict:
+def load_abi(file_name, current_directory, *directories, encoding: Optional[str] = None) :
     path = os.path.join(current_directory, *directories, file_name)
     return json.load(open(path, encoding=encoding))
 
 
-def read_json(path: str, encoding: Optional[str] = None) -> list | dict:
+def read_json(path: str, encoding: Optional[str] = None):
     return json.load(open(path, encoding=encoding))
 
 
@@ -249,9 +249,5 @@ def to_md5(input_string):
 if __name__ == "__main__":
     generated_id = generate_moca_id()
     print("Generated ID:", generated_id)
-
-    input_string = "123456"
-    md5_hash = calculate_md5(input_string)
-    print("MD5 散列值:", md5_hash)
 
 
