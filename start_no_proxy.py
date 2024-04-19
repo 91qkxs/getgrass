@@ -104,32 +104,6 @@ async def run_websocket_logic(websocket, user_id, device_id, agent):
         await websocket.close()  # 确保关闭连接
 
 
-async def run_with_proxy(uri, ssl_context, custom_headers, device_id, user_id, proxy):
-    """
-    使用代理运行 WebSocket 连接
-    """
-    try:
-        async with proxy_connect(uri, ssl=ssl_context, extra_headers=custom_headers, proxy=proxy,
-                                 proxy_conn_timeout=10) as websocket_p:
-            # 将连接加入到已连接的 WebSocket 列表中
-            connected_websockets.append(websocket_p)
-            await run_websocket_logic(websocket_p, user_id, device_id)
-    except Exception as e:
-        logger.error(f"代理不可用， {proxy.proxy_host}: {proxy.proxy_port} ，异常信息：{e}")
-
-
-async def run_without_proxy(uri, ssl_context, agent, device_id, user_id):
-    """
-    不使用代理运行 WebSocket 连接
-    """
-    try:
-        async with websockets.connect(uri, ssl=ssl_context, extra_headers={"User-Agent": agent}) as websocket:
-            # 将连接加入到已连接的 WebSocket 列表中
-            connected_websockets.append(websocket)
-            await run_websocket_logic(websocket, user_id, device_id, agent)
-    except Exception as e:
-        logger.error(f"Error occurred without proxy  {e}")
-
 
 async def close_connected_websockets():
     """
@@ -150,14 +124,72 @@ async def main(user_id):
 
     device_id = str(uuid.uuid4())
     logger.info(device_id)
-    uri_options = ["wss://proxy.wynd.network:4650/", "wss://proxy.wynd.network:4444"]
-    agent = Faker().chrome()
-
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
-    await run_without_proxy(random.choice(uri_options), ssl_context, agent, device_id, user_id)
+    device_id = str(uuid.uuid4())
+    agent = Faker().chrome()
+    uri_options = ["wss://proxy.wynd.network:4650/"]
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    # 第一步发起sock链接
+    uri = random.choice(uri_options)
+    while True:
+        try:
+            async with websockets.connect(uri, ssl=ssl_context, extra_headers={"User-Agent": agent}) as websocket:
+                # 将连接加入到已连接的 WebSocket 列表中
+                connected_websockets.append(websocket)
+
+                # 第1步：接收平台auth请求响应
+                auth_response = await receive_message(websocket)
+                logger.info(f" 平台auth认证响应成功：", auth_response)
+                await asyncio.sleep(random.randint(10, 20) / 10)
+                # 第3步：进行auth请求
+                await authenticate(websocket, auth_response["id"], device_id, user_id, agent)
+                await asyncio.sleep(20)
+
+                """
+                业务逻辑处理
+                """
+                # 第2步：发送ping请求
+                message = {
+                    "id": str(uuid.uuid4()),
+                    "version": "1.0.0",
+                    "action": "PING",
+                    "data": {}
+                }
+                await send_message(websocket, message)
+
+                while True:
+                    # 第4步：得到认证成功请求响应
+                    pong_response = await receive_message(websocket)
+                    logger.info(f"报文响应成功：", pong_response)
+                    await asyncio.sleep(random.randint(1, 9) / 10)
+                    pong_message = {
+                        "id": pong_response["id"],
+                        "origin_action": "PONG"
+                    }
+                    # 第5步：回复平台已得到认证成功请求响应
+                    await send_message(websocket, pong_message)
+
+                    await asyncio.sleep(random.randint(180, 250) / 10)
+
+                    ping_message = {
+                        "id": str(uuid.uuid4()),
+                        "version": "1.0.0",
+                        "action": "PING",
+                        "data": {}
+                    }
+                    # 第6步：发送心跳包
+                    await send_message(websocket, ping_message)
+                    await asyncio.sleep(random.randint(1, 9) / 10)
+        except Exception as e:
+            sleep_time = random.randint(5, 15)
+            logger.error(f"连接失败，准备重连,异常信息：{e}")
+            await asyncio.sleep(sleep_time)
+
 
 if __name__ == "__main__":
-    user_id = '5b62d235-273c-4707-85df-9bcca26a5306'
+    user_id = '5b62d235-273c-9bcca26a5306'
     asyncio.run(main(user_id))
