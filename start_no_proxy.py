@@ -143,7 +143,7 @@ async def main(user_id):
 
                 # 第1步：接收平台auth请求响应
                 auth_response = await receive_message(websocket)
-                logger.info(f" 平台auth认证响应成功：", auth_response)
+                logger.info(f" 平台auth认证响应成功：{auth_response}")
                 await asyncio.sleep(random.randint(10, 20) / 10)
                 # 第3步：进行auth请求
                 await authenticate(websocket, auth_response["id"], device_id, user_id, agent)
@@ -164,7 +164,7 @@ async def main(user_id):
                 while True:
                     # 第4步：得到认证成功请求响应
                     pong_response = await receive_message(websocket)
-                    logger.info(f"报文响应成功：", pong_response)
+                    logger.info(f"报文响应成功：{pong_response}")
                     await asyncio.sleep(random.randint(1, 9) / 10)
                     pong_message = {
                         "id": pong_response["id"],
